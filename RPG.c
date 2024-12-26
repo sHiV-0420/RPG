@@ -575,3 +575,860 @@ int main() {
     game.start();
     return 0;
 }
+using namespace std;
+
+// Enum Definitions
+enum class ItemType { WEAPON, ARMOR, POTION, SCROLL, TRAP, ARTIFACT };
+enum class Rarity { COMMON, UNCOMMON, RARE, LEGENDARY };
+enum class Skill { NONE, FIREBALL, HEALING_TOUCH, STRENGTH_BOOST, ICE_BLAST, LIGHTNING_STRIKE };
+enum class QuestType { MAIN, SIDE };
+enum class Faction { NONE, TOWN, ENEMY, MERCHANT };
+
+// Base Item Class
+class Item {
+public:
+    string name;
+    ItemType type;
+    int value;
+    Rarity rarity;
+
+    Item(string name, ItemType type, int value, Rarity rarity)
+        : name(name), type(type), value(value), rarity(rarity) {}
+
+    virtual void use() = 0;
+    virtual void display() const {
+        cout << name << " (Value: " << value << ", Rarity: " << (int)rarity << ")" << endl;
+    }
+
+    virtual ~Item() = default;
+};
+
+// Derived Weapon Class
+class Weapon : public Item {
+public:
+    int attackPower;
+
+    Weapon(string name, int value, Rarity rarity, int attackPower)
+        : Item(name, ItemType::WEAPON, value, rarity), attackPower(attackPower) {}
+
+    void use() override {
+        cout << "Equipping weapon: " << name << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Attack Power: " << attackPower << endl;
+    }
+};
+
+// Derived Armor Class
+class Armor : public Item {
+public:
+    int defensePower;
+
+    Armor(string name, int value, Rarity rarity, int defensePower)
+        : Item(name, ItemType::ARMOR, value, rarity), defensePower(defensePower) {}
+
+    void use() override {
+        cout << "Equipping armor: " << name << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Defense Power: " << defensePower << endl;
+    }
+};
+
+// Derived Potion Class
+class Potion : public Item {
+public:
+    int healingAmount;
+
+    Potion(string name, int value, Rarity rarity, int healingAmount)
+        : Item(name, ItemType::POTION, value, rarity), healingAmount(healingAmount) {}
+
+    void use() override {
+        cout << "Using potion: " << name << " restores " << healingAmount << " health." << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Healing Amount: " << healingAmount << endl;
+    }
+};
+
+// Derived Scroll Class (for magic skills)
+class Scroll : public Item {
+public:
+    Skill skill;
+
+    Scroll(string name, int value, Rarity rarity, Skill skill)
+        : Item(name, ItemType::SCROLL, value, rarity), skill(skill) {}
+
+    void use() override {
+        switch (skill) {
+            case Skill::FIREBALL: cout << "Casting Fireball!" << endl; break;
+            case Skill::HEALING_TOUCH: cout << "Casting Healing Touch!" << endl; break;
+            default: cout << "Casting Unknown Spell!" << endl; break;
+        }
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Skill: " << (int)skill << endl;
+    }
+};
+
+// Quest Class
+class Quest {
+public:
+    string title;
+    string description;
+    QuestType type;
+    bool isCompleted;
+
+    Quest(string title, string description, QuestType type)
+        : title(title), description(description), type(type), isCompleted(false) {}
+
+    void complete() {
+        isCompleted = true;
+        cout << "Quest " << title << " completed!" << endl;
+    }
+
+    void display() const {
+        cout << "Quest: " << title << endl;
+        cout << description << endl;
+        cout << "Status: " << (isCompleted ? "Completed" : "In Progress") << endl;
+    }
+};
+
+// Character Class
+class Character {
+private:
+    string name;
+    int health;
+    int maxHealth;
+    int attackPower;
+    int defensePower;
+    int level;
+    int experience;
+    vector<Item*> inventory;
+    map<Skill, int> skillLevels;
+
+public:
+    Character(string name)
+        : name(name), health(100), maxHealth(100), attackPower(10), defensePower(5), level(1), experience(0) {}
+
+    void heal(int amount) {
+        health = min(maxHealth, health + amount);
+        cout << name << " healed by " << amount << " health." << endl;
+    }
+
+    void takeDamage(int damage) {
+        int damageTaken = max(0, damage - defensePower);
+        health = max(0, health - damageTaken);
+        cout << name << " took " << damageTaken << " damage!" << endl;
+    }
+
+    void levelUp() {
+        level++;
+        maxHealth += 20;
+        attackPower += 5;
+        defensePower += 3;
+        cout << name << " leveled up to level " << level << "!" << endl;
+    }
+
+    void gainExperience(int exp) {
+        experience += exp;
+        if (experience >= 100) {
+            experience = 0;
+            levelUp();
+        }
+    }
+
+    void addItem(Item* item) {
+        inventory.push_back(item);
+    }
+
+    void showInventory() const {
+        cout << "Inventory:\n";
+        for (auto& item : inventory) {
+            item->display();
+        }
+    }
+
+    void useItem(int index) {
+        if (index < 0 || index >= inventory.size()) {
+            cout << "Invalid index!" << endl;
+            return;
+        }
+        inventory[index]->use();
+    }
+
+    void equipItem(Item* item) {
+        if (item->type == ItemType::WEAPON) {
+            attackPower += dynamic_cast<Weapon*>(item)->attackPower;
+        } else if (item->type == ItemType::ARMOR) {
+            defensePower += dynamic_cast<Armor*>(item)->defensePower;
+        }
+        cout << "Equipped " << item->name << endl;
+    }
+
+    void displayStats() const {
+        cout << name << "'s Stats:\n";
+        cout << "Health: " << health << "/" << maxHealth << endl;
+        cout << "Attack Power: " << attackPower << endl;
+        cout << "Defense Power: " << defensePower << endl;
+        cout << "Level: " << level << endl;
+        cout << "Experience: " << experience << endl;
+    }
+
+    vector<Item*>& getInventory() {
+        return inventory;
+    }
+
+    ~Character() {
+        for (auto item : inventory) {
+            delete item;
+        }
+    }
+};
+
+// Enemy Class
+class Enemy {
+private:
+    string name;
+    int health;
+    int attackPower;
+    vector<Item*> loot;
+
+public:
+    Enemy(string name, int health, int attackPower)
+        : name(name), health(health), attackPower(attackPower) {}
+
+    void takeDamage(int damage) {
+        health = max(0, health - damage);
+        cout << name << " took " << damage << " damage!" << endl;
+    }
+
+    void attack(Character& target) const {
+        target.takeDamage(attackPower);
+    }
+
+    void dropLoot() {
+        cout << name << " dropped the following loot:\n";
+        for (auto& item : loot) {
+            item->display();
+        }
+    }
+
+    void addLoot(Item* item) {
+        loot.push_back(item);
+    }
+
+    void showStats() const {
+        cout << name << " (Health: " << health << ", Attack Power: " << attackPower << ")\n";
+    }
+
+    bool isAlive() const {
+        return health > 0;
+    }
+};
+
+// Map / Location Class
+class Location {
+public:
+    string name;
+    vector<Enemy> enemies;
+    vector<Quest> quests;
+    vector<Item*> items;
+
+    Location(string name) : name(name) {}
+
+    void addEnemy(Enemy enemy) {
+        enemies.push_back(enemy);
+    }
+
+    void addItem(Item* item) {
+        items.push_back(item);
+    }
+
+    void addQuest(Quest quest) {
+        quests.push_back(quest);
+    }
+
+    void display() const {
+        cout << "Location: " << name << endl;
+        cout << "Enemies here:\n";
+        for (auto& enemy : enemies) {
+            enemy.showStats();
+        }
+        cout << "Items here:\n";
+        for (auto& item : items) {
+            item->display();
+        }
+    }
+};
+
+// Game Class with multiple locations and advanced features
+class Game {
+private:
+    Character* player;
+    vector<Location> locations;
+    bool isRunning;
+
+public:
+    Game() : isRunning(true) {}
+
+    void start() {
+        cout << "Enter your character's name: ";
+        string name;
+        cin >> name;
+        player = new Character(name);
+
+        // Creating a simple map with locations
+        Location town("Town");
+        Location dungeon("Dungeon");
+
+        // Adding enemies to locations
+        town.addEnemy(Enemy("Goblin", 50, 10));
+        dungeon.addEnemy(Enemy("Troll", 100, 20));
+
+        // Adding quests
+        town.addQuest(Quest("Find the Town Elder", "Visit the elder in town.", QuestType::MAIN));
+        dungeon.addQuest(Quest("Defeat the Troll", "Defeat the troll in the dungeon.", QuestType::SIDE));
+
+        // Adding items
+        town.addItem(new Potion("Healing Potion", 30, Rarity.COMMON, 50));
+        dungeon.addItem(new Weapon("Sword", 100, Rarity.RARE, 30));
+
+        locations.push_back(town);
+        locations.push_back(dungeon);
+
+        // Start Game Loop
+        gameLoop();
+    }
+
+    void gameLoop() {
+        while (isRunning) {
+            cout << "\nWhat would you like to do?\n";
+            cout << "1. View Stats\n";
+            cout << "2. View Inventory\n";
+            cout << "3. Travel\n";
+            cout << "4. Exit Game\n";
+            int choice;
+            cin >> choice;
+
+            switch (choice) {
+                case 1:
+                    player->displayStats();
+                    break;
+                case 2:
+                    player->showInventory();
+                    break;
+                case 3:
+                    travel();
+                    break;
+                case 4:
+                    isRunning = false;
+                    cout << "Exiting game..." << endl;
+                    break;
+                default:
+                    cout << "Invalid option. Try again." << endl;
+                    break;
+            }
+        }
+    }
+
+    void travel() {
+        cout << "Where do you want to go?\n";
+        for (size_t i = 0; i < locations.size(); i++) {
+            cout << (i + 1) << ". " << locations[i].name << endl;
+        }
+        int choice;
+        cin >> choice;
+        if (choice < 1 || choice > locations.size()) {
+            cout << "Invalid location." << endl;
+            return;
+        }
+        locations[choice - 1].display();
+    }
+
+    ~Game() {
+        delete player;
+    }
+};
+
+int main() {
+    Game game;
+    game.start();
+    return 0;
+}
+enum class ItemType { WEAPON, ARMOR, POTION, SCROLL, TRAP, ARTIFACT, MATERIAL };
+enum class Rarity { COMMON, UNCOMMON, RARE, LEGENDARY };
+enum class Skill { NONE, FIREBALL, HEALING_TOUCH, STRENGTH_BOOST, ICE_BLAST, LIGHTNING_STRIKE };
+enum class QuestType { MAIN, SIDE };
+enum class Faction { NONE, TOWN, ENEMY, MERCHANT };
+enum class TimeOfDay { DAY, NIGHT };
+
+// Base Item Class
+class Item {
+public:
+    string name;
+    ItemType type;
+    int value;
+    Rarity rarity;
+
+    Item(string name, ItemType type, int value, Rarity rarity)
+        : name(name), type(type), value(value), rarity(rarity) {}
+
+    virtual void use() = 0;
+    virtual void display() const {
+        cout << name << " (Value: " << value << ", Rarity: " << (int)rarity << ")" << endl;
+    }
+
+    virtual ~Item() = default;
+};
+
+// Derived Weapon Class
+class Weapon : public Item {
+public:
+    int attackPower;
+
+    Weapon(string name, int value, Rarity rarity, int attackPower)
+        : Item(name, ItemType::WEAPON, value, rarity), attackPower(attackPower) {}
+
+    void use() override {
+        cout << "Equipping weapon: " << name << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Attack Power: " << attackPower << endl;
+    }
+};
+
+// Derived Armor Class
+class Armor : public Item {
+public:
+    int defensePower;
+
+    Armor(string name, int value, Rarity rarity, int defensePower)
+        : Item(name, ItemType::ARMOR, value, rarity), defensePower(defensePower) {}
+
+    void use() override {
+        cout << "Equipping armor: " << name << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Defense Power: " << defensePower << endl;
+    }
+};
+
+// Derived Potion Class
+class Potion : public Item {
+public:
+    int healingAmount;
+
+    Potion(string name, int value, Rarity rarity, int healingAmount)
+        : Item(name, ItemType::POTION, value, rarity), healingAmount(healingAmount) {}
+
+    void use() override {
+        cout << "Using potion: " << name << " restores " << healingAmount << " health." << endl;
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Healing Amount: " << healingAmount << endl;
+    }
+};
+
+// Derived Scroll Class (for magic skills)
+class Scroll : public Item {
+public:
+    Skill skill;
+
+    Scroll(string name, int value, Rarity rarity, Skill skill)
+        : Item(name, ItemType::SCROLL, value, rarity), skill(skill) {}
+
+    void use() override {
+        switch (skill) {
+            case Skill::FIREBALL: cout << "Casting Fireball!" << endl; break;
+            case Skill::HEALING_TOUCH: cout << "Casting Healing Touch!" << endl; break;
+            default: cout << "Casting Unknown Spell!" << endl; break;
+        }
+    }
+
+    void display() const override {
+        Item::display();
+        cout << "Skill: " << (int)skill << endl;
+    }
+};
+
+// Material Class for Crafting System
+class Material : public Item {
+public:
+    Material(string name, int value, Rarity rarity)
+        : Item(name, ItemType::MATERIAL, value, rarity) {}
+
+    void use() override {
+        cout << "Using material: " << name << endl;
+    }
+    
+    void display() const override {
+        Item::display();
+    }
+};
+
+// Quest Class
+class Quest {
+public:
+    string title;
+    string description;
+    QuestType type;
+    bool isCompleted;
+    vector<string> choices;
+    int rewardExp;
+
+    Quest(string title, string description, QuestType type, int rewardExp = 0)
+        : title(title), description(description), type(type), isCompleted(false), rewardExp(rewardExp) {}
+
+    void complete() {
+        isCompleted = true;
+        cout << "Quest " << title << " completed!" << endl;
+    }
+
+    void display() const {
+        cout << "Quest: " << title << endl;
+        cout << description << endl;
+        cout << "Status: " << (isCompleted ? "Completed" : "In Progress") << endl;
+    }
+
+    void addChoices(const vector<string>& newChoices) {
+        choices = newChoices;
+    }
+
+    void displayChoices() const {
+        if (!choices.empty()) {
+            cout << "Choices:\n";
+            for (size_t i = 0; i < choices.size(); ++i) {
+                cout << (i + 1) << ". " << choices[i] << endl;
+            }
+        }
+    }
+};
+
+// Character Class with expanded features
+class Character {
+private:
+    string name;
+    int health;
+    int maxHealth;
+    int attackPower;
+    int defensePower;
+    int level;
+    int experience;
+    vector<Item*> inventory;
+    map<Skill, int> skillLevels;
+
+public:
+    Character(string name)
+        : name(name), health(100), maxHealth(100), attackPower(10), defensePower(5), level(1), experience(0) {}
+
+    void heal(int amount) {
+        health = min(maxHealth, health + amount);
+        cout << name << " healed by " << amount << " health." << endl;
+    }
+
+    void takeDamage(int damage) {
+        int damageTaken = max(0, damage - defensePower);
+        health = max(0, health - damageTaken);
+        cout << name << " took " << damageTaken << " damage!" << endl;
+    }
+
+    void levelUp() {
+        level++;
+        maxHealth += 20;
+        attackPower += 5;
+        defensePower += 3;
+        cout << name << " leveled up to level " << level << "!" << endl;
+    }
+
+    void gainExperience(int exp) {
+        experience += exp;
+        if (experience >= 100) {
+            experience = 0;
+            levelUp();
+        }
+    }
+
+    void addItem(Item* item) {
+        inventory.push_back(item);
+    }
+
+    void showInventory() const {
+        cout << "Inventory:\n";
+        for (auto& item : inventory) {
+            item->display();
+        }
+    }
+
+    void useItem(int index) {
+        if (index < 0 || index >= inventory.size()) {
+            cout << "Invalid index!" << endl;
+            return;
+        }
+        inventory[index]->use();
+    }
+
+    void equipItem(Item* item) {
+        if (item->type == ItemType::WEAPON) {
+            attackPower += dynamic_cast<Weapon*>(item)->attackPower;
+        } else if (item->type == ItemType::ARMOR) {
+            defensePower += dynamic_cast<Armor*>(item)->defensePower;
+        }
+        cout << "Equipped " << item->name << endl;
+    }
+
+    void displayStats() const {
+        cout << name << "'s Stats:\n";
+        cout << "Health: " << health << "/" << maxHealth << endl;
+        cout << "Attack Power: " << attackPower << endl;
+        cout << "Defense Power: " << defensePower << endl;
+        cout << "Level: " << level << endl;
+        cout << "Experience: " << experience << endl;
+    }
+
+    vector<Item*>& getInventory() {
+        return inventory;
+    }
+
+    map<Skill, int>& getSkillLevels() {
+        return skillLevels;
+    }
+
+    ~Character() {
+        for (auto item : inventory) {
+            delete item;
+        }
+    }
+};
+
+// Enemy Class with new abilities
+class Enemy {
+private:
+    string name;
+    int health;
+    int attackPower;
+    vector<Item*> loot;
+    map<Skill, int> abilities;
+
+public:
+    Enemy(string name, int health, int attackPower)
+        : name(name), health(health), attackPower(attackPower) {}
+
+    void takeDamage(int damage) {
+        health = max(0, health - damage);
+        cout << name << " took " << damage << " damage!" << endl;
+    }
+
+    void attack(Character& target) const {
+        target.takeDamage(attackPower);
+    }
+
+    void useAbility(Character& target) {
+        for (auto& ability : abilities) {
+            cout << name << " uses ability: " << (int)ability.first << endl;
+            // Apply effects based on ability
+            if (ability.first == Skill::FIREBALL) {
+                target.takeDamage(50);
+            }
+        }
+    }
+
+    void addLoot(Item* item) {
+        loot.push_back(item);
+    }
+
+    void dropLoot() {
+        cout << name << " dropped the following loot:\n";
+        for (auto& item : loot) {
+            item->display();
+        }
+    }
+
+    void showStats() const {
+        cout << name << " (Health: " << health << ", Attack Power: " << attackPower << ")\n";
+    }
+
+    bool isAlive() const {
+        return health > 0;
+    }
+
+    void addAbility(Skill skill) {
+        abilities[skill] = 1;
+    }
+
+    ~Enemy() {
+        for (auto item : loot) {
+            delete item;
+        }
+    }
+};
+
+// World Class
+class World {
+public:
+    vector<Location> locations;
+    TimeOfDay timeOfDay;
+
+    World() : timeOfDay(TimeOfDay::DAY) {}
+
+    void addLocation(Location loc) {
+        locations.push_back(loc);
+    }
+
+    void cycleTime() {
+        if (timeOfDay == TimeOfDay::DAY) {
+            timeOfDay = TimeOfDay::NIGHT;
+        } else {
+            timeOfDay = TimeOfDay::DAY;
+        }
+        cout << "Time has shifted to " << (timeOfDay == TimeOfDay::DAY ? "Day" : "Night") << endl;
+    }
+
+    void showMap() const {
+        cout << "World Map:\n";
+        for (const auto& location : locations) {
+            location.display();
+        }
+    }
+
+    void interactWithLocation(int index, Character& player) {
+        if (index < 0 || index >= locations.size()) {
+            cout << "Invalid location.\n";
+            return;
+        }
+        Location& location = locations[index];
+        cout << "You are at " << location.name << "!\n";
+        for (auto& quest : location.quests) {
+            quest.display();
+        }
+    }
+};
+
+// Location / Map Class
+class Location {
+public:
+    string name;
+    vector<Enemy> enemies;
+    vector<Quest> quests;
+    vector<Item*> items;
+
+    Location(string name) : name(name) {}
+
+    void addEnemy(Enemy enemy) {
+        enemies.push_back(enemy);
+    }
+
+    void addItem(Item* item) {
+        items.push_back(item);
+    }
+
+    void addQuest(Quest quest) {
+        quests.push_back(quest);
+    }
+
+    void display() const {
+        cout << "Location: " << name << endl;
+        cout << "Items here:\n";
+        for (auto& item : items) {
+            item->display();
+        }
+    }
+};
+
+// Game Class with added features
+class Game {
+private:
+    Character* player;
+    World world;
+    bool isRunning;
+
+public:
+    Game() : isRunning(true) {}
+
+    void start() {
+        cout << "Enter your character's name: ";
+        string name;
+        cin >> name;
+        player = new Character(name);
+
+        // Adding Locations and Quests to World
+        Location town("Town");
+        Location dungeon("Dungeon");
+
+        town.addQuest(Quest("Visit the Town Elder", "Speak with the elder in town.", QuestType::MAIN));
+        dungeon.addQuest(Quest("Defeat the Troll", "Defeat the troll guarding the dungeon.", QuestType::SIDE));
+
+        world.addLocation(town);
+        world.addLocation(dungeon);
+
+        // Add Items and Enemies to Locations
+        town.addItem(new Potion("Healing Potion", 30, Rarity::COMMON, 50));
+        dungeon.addItem(new Weapon("Sword", 100, Rarity::RARE, 30));
+        dungeon.addEnemy(Enemy("Troll", 100, 30));
+
+        // Game loop
+        gameLoop();
+    }
+
+    void gameLoop() {
+        while (isRunning) {
+            cout << "\nWhat would you like to do?\n";
+            cout << "1. View Stats\n";
+            cout << "2. View Inventory\n";
+            cout << "3. Travel\n";
+            cout << "4. Interact with World\n";
+            cout << "5. Exit Game\n";
+            int choice;
+            cin >> choice;
+
+            switch (choice) {
+                case 1:
+                    player->displayStats();
+                    break;
+                case 2:
+                    player->showInventory();
+                    break;
+                case 3:
+                    world.showMap();
+                    break;
+                case 4:
+                    cout << "Which location would you like to interact with?\n";
+                    int locationChoice;
+                    cin >> locationChoice;
+                    world.interactWithLocation(locationChoice - 1, *player);
+                    break;
+                case 5:
+                    isRunning = false;
+                    cout << "Exiting game..." << endl;
+                    break;
+                default:
+                    cout << "Invalid option. Try again." << endl;
+                    break;
+            }
+        }
+    }
+
+    ~Game() {
+        delete player;
+    }
+};
+
+int main() {
+    Game game;
+    game.start();
+    return 0;
+}
